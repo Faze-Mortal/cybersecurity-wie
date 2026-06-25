@@ -446,6 +446,13 @@ input[type="text"] {
         font-size: 0.85rem;
     }
 
+    .typewriter {
+        white-space: normal;
+        width: auto;
+        animation: none;
+        border-right: none;
+    }
+
     /* Cards */
     .cyber-card {
         padding: 1.2rem;

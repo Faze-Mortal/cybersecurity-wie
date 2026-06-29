@@ -1,7 +1,8 @@
 (async function initAntiCheat() {
     try {
-        const res = await fetch('/api/session');
-        const session = await res.json();
+        const sessionDataString = localStorage.getItem('cyber_odyssey_session');
+        if (!sessionDataString) return;
+        const session = JSON.parse(sessionDataString);
         
         if (!session.authenticated) return;
         if (session.is_admin === true) {
@@ -128,11 +129,11 @@
                     const currentAnswers = getAnswersPayload();
                     
                     try {
-                        await fetch('/api/round/' + currentRound + '/submit', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ answers: currentAnswers })
-                        });
+                        const sessionData = JSON.parse(localStorage.getItem('cyber_odyssey_session'));
+                        if (sessionData && sessionData.scores) {
+                            sessionData.scores['round_' + currentRound] = 0; // Force 0 score on disqualification
+                            localStorage.setItem('cyber_odyssey_session', JSON.stringify(sessionData));
+                        }
                         console.log('Force submission complete.');
                     } catch (err) {
                         console.error('Force submission failed:', err);

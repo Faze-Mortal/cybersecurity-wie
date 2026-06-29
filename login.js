@@ -1,34 +1,32 @@
-document.getElementById('login-form').addEventListener('submit', async (e) => {
+document.getElementById('sandbox-btn').addEventListener('click', (e) => {
     e.preventDefault();
-    const errorEl = document.getElementById('login-error');
-    errorEl.classList.remove('visible');
-
-    const name = document.getElementById('participant-name').value.trim();
-    const team_name = document.getElementById('team-name').value.trim();
-    const registration_number = document.getElementById('reg-number').value.trim();
-
-    if (!name || !team_name || !registration_number) {
-        errorEl.textContent = '> ERROR: All fields are required.';
-        errorEl.classList.add('visible');
-        return;
-    }
+    
+    // Create a mock session for the static archive
+    const mockSession = {
+        authenticated: true,
+        name: "Archive Visitor",
+        team_name: "Archive Explorer",
+        registration_number: "ARCHIVE-000",
+        is_admin: false,
+        scores: {
+            round_1: null,
+            round_2: null,
+            round_3: null,
+            round_4: null,
+            round_5: null
+        }
+    };
 
     try {
-        const res = await fetch('/api/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, team_name, registration_number })
-        });
-        const data = await res.json();
+        localStorage.setItem('cyber_odyssey_session', JSON.stringify(mockSession));
+        
+        // Reset cheat strikes for a fresh playthrough
+        sessionStorage.removeItem('cheatStrikes');
 
-        if (data.success) {
-            window.location.href = 'index.html';
-        } else {
-            errorEl.textContent = `> ACCESS_DENIED: ${data.error}`;
-            errorEl.classList.add('visible');
-        }
+        window.location.href = 'index.html';
     } catch (err) {
-        errorEl.textContent = '> CONNECTION_FAILED: Server unreachable.';
+        const errorEl = document.getElementById('login-error');
+        errorEl.textContent = '> LOCAL_STORAGE_ERROR: Please enable cookies/storage.';
         errorEl.classList.add('visible');
     }
 });

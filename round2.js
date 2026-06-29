@@ -54,30 +54,31 @@ const progressFill = document.getElementById('progress-fill');
 const finalScore = document.getElementById('final-score');
 const evaluationText = document.getElementById('evaluation-text');
 
-// ─── SESSION & ROUND STATUS CHECK ───────────────────────────────────────────
-(async function init() {
-    try {
-        const sessionRes = await fetch('/api/session');
-        const sessionData = await sessionRes.json();
-        if (!sessionData.authenticated) {
-            window.location.href = 'login.html';
-            return;
-        }
-        isAdmin = sessionData.is_admin;
+const ROUND_2_ANSWERS = [
+    1, // Q1: Explainable model (Right Bridge)
+    0, // Q2: Release immediately (Left Bridge)
+    1, // Q3: Less advanced for rural (Right Bridge)
+    1  // Q4: Collect with consent (Right Bridge)
+];
 
-        const statusRes = await fetch('/api/round/2/status');
-        const statusData = await statusRes.json();
-        if (statusData.completed && !isAdmin) {
-            startScreen.classList.remove('active');
-            if (blockedScreen) {
-                blockedScreen.classList.add('active');
-                const blockedScore = document.getElementById('blocked-score');
-                if (blockedScore) blockedScore.textContent = statusData.score;
-            }
-            return;
+// ─── SESSION & ROUND STATUS CHECK ───────────────────────────────────────────
+(function init() {
+    const sessionData = localStorage.getItem('cyber_odyssey_session');
+    if (!sessionData) {
+        window.location.href = 'login.html';
+        return;
+    }
+    const data = JSON.parse(sessionData);
+    isAdmin = data.is_admin;
+
+    if (data.scores && data.scores.round_2 !== null && !isAdmin) {
+        startScreen.classList.remove('active');
+        if (blockedScreen) {
+            blockedScreen.classList.add('active');
+            const blockedScore = document.getElementById('blocked-score');
+            if (blockedScore) blockedScore.textContent = data.scores.round_2;
         }
-    } catch(e) {
-        console.warn('Server not reachable, running in static mode.');
+        return;
     }
 
     startBtn.addEventListener('click', startGame);
@@ -86,9 +87,6 @@ const evaluationText = document.getElementById('evaluation-text');
 
 async function startGame() {
     if (window.startAntiCheatTracking) window.startAntiCheatTracking();
-    try {
-        await fetch('/api/round/2/start', { method: 'POST' });
-    } catch(e) { /* static fallback */ }
     startScreen.classList.remove('active');
     questionScreen.classList.add('active');
     currentQuestionIndex = 0;
@@ -170,16 +168,20 @@ async function endGame() {
     questionScreen.classList.remove('active');
     endScreen.classList.add('active');
 
+    // Compute score locally
     let serverScore = 0;
-    try {
-        const res = await fetch('/api/round/2/submit', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ answers: userAnswers })
-        });
-        const data = await res.json();
-        if (data.success) serverScore = data.score;
-    } catch(e) { console.warn('Server not reachable.'); }
+    for (let i = 0; i < ROUND_2_ANSWERS.length; i++) {
+        if (userAnswers[i] === ROUND_2_ANSWERS[i]) {
+            serverScore++;
+        }
+    }
+
+    // Save to local storage
+    if (!isAdmin) {
+        const sessionData = JSON.parse(localStorage.getItem('cyber_odyssey_session'));
+        sessionData.scores.round_2 = serverScore;
+        localStorage.setItem('cyber_odyssey_session', JSON.stringify(sessionData));
+    }
 
     score = serverScore;
     

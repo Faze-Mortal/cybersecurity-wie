@@ -230,14 +230,22 @@
     <script src="anti-cheat.js"></script>
 </body>
 <script>
-    (async function checkSession() {
+    const HALL_OF_FAME = [
+        { name: "Semicolon", player: "Kanika Dev", score: 74, time: "80.136s" },
+        { name: "state:unstable", player: "Ismael Cifuentes", score: 73, time: "90.021s" },
+        { name: "Team 404", player: "Abhishek Kumar Singh", score: 73, time: "283.850s" },
+        { name: "caffeine overdose", player: "Kanaldeep singh", score: 72, time: "135.600s" },
+        { name: "lallulomdi", player: "Anshika dhaka", score: 65, time: "179.711s" }
+    ];
+
+    (function checkSession() {
         try {
-            const res = await fetch('/api/session');
-            const data = await res.json();
-            if (!data.authenticated) {
+            const sessionData = localStorage.getItem('cyber_odyssey_session');
+            if (!sessionData) {
                 window.location.href = 'login.html';
                 return;
             }
+            const data = JSON.parse(sessionData);
 
             const teamInfoEl = document.getElementById('team-info');
             if (teamInfoEl) {
@@ -248,33 +256,64 @@
             }
 
             // Check if all rounds are completed
-            const s = data.scores;
-            if (s && s.round_1 !== null && s.round_2 !== null && s.round_3 !== null && s.round_4 !== null && s.round_5 !== null) {
+            const s = data.scores || {};
+            if (s.round_1 !== null && s.round_2 !== null && s.round_3 !== null && s.round_4 !== null && s.round_5 !== null) {
                 const total = s.round_1 + s.round_2 + s.round_3 + s.round_4 + s.round_5;
                 const btnContainer = document.getElementById('action-btn-container');
                 if (btnContainer) {
-                    btnContainer.innerHTML = `<button onclick="showFinalResults(${total})" class="start-quiz-btn" style="background: var(--brand-primary); cursor: pointer; border: none; font-family: inherit;">SHOW RESULTS</button>`;
+                    btnContainer.innerHTML = `<button onclick="showFinalResults(${total})" class="start-quiz-btn" style="background: var(--brand-primary); cursor: pointer; border: none; font-family: inherit;">SHOW ARCHIVE RESULTS</button>`;
                 }
             }
         } catch (e) {
-            // If server is not running, allow static browsing
-            console.warn('Server not reachable, running in static mode.');
+            console.warn('Error reading local storage.');
+            window.location.href = 'login.html';
         }
     })();
 
     function showFinalResults(totalScore) {
         const roundsGrid = document.querySelector('.rounds-grid');
         if (roundsGrid) {
+            let leaderboardHTML = `
+                <div style="margin-top: 2rem; width: 100%; border: 1px solid var(--highlight); background: rgba(123, 44, 191, 0.1); padding: 2rem; border-radius: 8px;">
+                    <h3 class="neon-text" style="text-align: center; font-size: 2rem; margin-bottom: 1.5rem;">HALL OF FAME</h3>
+                    <table style="width: 100%; border-collapse: collapse; font-family: 'Fira Code', monospace; color: var(--text-main);">
+                        <thead>
+                            <tr style="border-bottom: 2px solid var(--primary); text-align: left; color: var(--highlight);">
+                                <th style="padding: 1rem;">RANK</th>
+                                <th style="padding: 1rem;">TEAM</th>
+                                <th style="padding: 1rem;">PLAYER</th>
+                                <th style="padding: 1rem;">SCORE</th>
+                                <th style="padding: 1rem;">TIME (R3)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            HALL_OF_FAME.forEach((team, index) => {
+                leaderboardHTML += `
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                        <td style="padding: 1rem; color: ${index === 0 ? 'var(--accent)' : 'inherit'};">#${index + 1}</td>
+                        <td style="padding: 1rem; font-weight: bold;">${team.name}</td>
+                        <td style="padding: 1rem; color: var(--text-muted);">${team.player}</td>
+                        <td style="padding: 1rem; color: var(--success);">${team.score}</td>
+                        <td style="padding: 1rem;">${team.time}</td>
+                    </tr>
+                `;
+            });
+            
+            leaderboardHTML += `</tbody></table></div>`;
+
             roundsGrid.innerHTML = `
             <div class="terminal-box" style="grid-column: 1 / -1; text-align: center; padding: 4rem 2rem; border-color: var(--success); background: rgba(0, 200, 83, 0.05);">
-                <h2 class="neon-text" style="font-size: 2.5rem; margin-bottom: 1rem; color: var(--success);">> SYSTEM_OVERRIDE_COMPLETE</h2>
-                <p style="font-size: 1.2rem; margin-bottom: 2rem; color: var(--text-main);">> ALL PROTOCOLS EXECUTED. FINAL SCORE COMPUTED.</p>
+                <h2 class="neon-text" style="font-size: 2.5rem; margin-bottom: 1rem; color: var(--success);">> ARCHIVE_RUN_COMPLETE</h2>
                 <div style="font-size: 5rem; color: var(--success); font-weight: bold; text-shadow: 0 0 30px rgba(0, 200, 83, 0.5); font-family: 'Fira Code', monospace;">
                     ${totalScore} <span style="font-size: 2.5rem; color: var(--text-secondary); text-shadow: none;">/ 74</span>
                 </div>
-                <p style="font-size: 1rem; color: var(--text-secondary); margin-top: 1rem;">TOTAL POINTS ACQUIRED</p>
+                <p style="font-size: 1rem; color: var(--text-secondary); margin-top: 1rem; margin-bottom: 2rem;">TOTAL POINTS ACQUIRED IN SANDBOX</p>
+                
+                ${leaderboardHTML}
             </div>
-        `;
+            `;
         }
         const btnContainer = document.getElementById('action-btn-container');
         if (btnContainer) btnContainer.style.display = 'none';
@@ -297,14 +336,9 @@
         if (e.target === this) closeUserModal();
     });
 
-    async function logoutUser() {
-        try {
-            await fetch('/api/logout', { method: 'POST' });
-            window.location.href = 'login.html';
-        } catch (e) {
-            console.error(e);
-            window.location.href = 'login.html';
-        }
+    function logoutUser() {
+        localStorage.removeItem('cyber_odyssey_session');
+        window.location.href = 'login.html';
     }
 </script>
 

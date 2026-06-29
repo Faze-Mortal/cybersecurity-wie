@@ -120,29 +120,14 @@
                         <p class="typewriter delay-1">> ENTER TEAM CREDENTIALS TO PROCEED</p>
                     </div>
 
-                    <form id="login-form">
-                        <div class="login-field">
-                            <label>> PARTICIPANT_NAME:</label>
-                            <input type="text" id="participant-name" placeholder="Enter your full name..."
-                                autocomplete="off" required>
-                        </div>
-                        <div class="login-field">
-                            <label>> TEAM_NAME:</label>
-                            <input type="text" id="team-name" placeholder="Enter team name..." autocomplete="off"
-                                required>
-                        </div>
-                        <div class="login-field">
-                            <label>> REGISTRATION_NUMBER:</label>
-                            <input type="text" id="reg-number" placeholder="Enter registration number..."
-                                autocomplete="off" required>
-                        </div>
-                        <button type="submit" class="cyber-btn" style="width: 100%;">
-                            <span class="btn-text">REGISTER / AUTHENTICATE</span>
+                    <div id="login-form">
+                        <button type="button" id="sandbox-btn" class="cyber-btn" style="width: 100%;">
+                            <span class="btn-text">ENTER ARCHIVE SANDBOX</span>
                         </button>
-                    </form>
+                    </div>
 
                     <div id="login-error" class="login-error">
-                        > ACCESS_DENIED: Invalid credentials.
+                        > SYSTEM_ERROR: Sandbox initialization failed.
                     </div>
                 </div>
             </div>

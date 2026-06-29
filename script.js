@@ -64,31 +64,32 @@ function typeWriterEffect(element, text, speed = 15) {
     });
 }
 
-// ─── SESSION & ROUND STATUS CHECK ───────────────────────────────────────────
-(async function init() {
-    try {
-        const sessionRes = await fetch('/api/session');
-        const sessionData = await sessionRes.json();
-        if (!sessionData.authenticated) {
-            window.location.href = 'login.html';
-            return;
-        }
-        isAdmin = sessionData.is_admin;
+const ROUND_1_ANSWERS = [
+    "red light",   // Q1: Healthcare AI shipped with biased data
+    "red light",   // Q2: Social media delays fixing misinformation
+    "green light", // Q3: University conducts fairness testing
+    "red light"    // Q4: Fitness app shares location without consent
+];
 
-        const statusRes = await fetch('/api/round/1/status');
-        const statusData = await statusRes.json();
-        if (statusData.completed && !isAdmin) {
-            // Round already completed — show blocked screen
-            startScreen.classList.remove('active');
-            if (blockedScreen) {
-                blockedScreen.classList.add('active');
-                const blockedScore = document.getElementById('blocked-score');
-                if (blockedScore) blockedScore.textContent = statusData.score;
-            }
-            return;
+// ─── SESSION & ROUND STATUS CHECK ───────────────────────────────────────────
+(function init() {
+    const sessionData = localStorage.getItem('cyber_odyssey_session');
+    if (!sessionData) {
+        window.location.href = 'login.html';
+        return;
+    }
+    const data = JSON.parse(sessionData);
+    isAdmin = data.is_admin;
+
+    if (data.scores && data.scores.round_1 !== null && !isAdmin) {
+        // Round already completed — show blocked screen
+        startScreen.classList.remove('active');
+        if (blockedScreen) {
+            blockedScreen.classList.add('active');
+            const blockedScore = document.getElementById('blocked-score');
+            if (blockedScore) blockedScore.textContent = data.scores.round_1;
         }
-    } catch(e) {
-        console.warn('Server not reachable, running in static mode.');
+        return;
     }
 
     // Bind event listeners only if round is playable
@@ -99,9 +100,6 @@ function typeWriterEffect(element, text, speed = 15) {
 
 async function startGame() {
     if (window.startAntiCheatTracking) window.startAntiCheatTracking();
-    try {
-        await fetch('/api/round/1/start', { method: 'POST' });
-    } catch(e) { /* static fallback */ }
 
     startScreen.classList.remove('active');
     questionScreen.classList.add('active');
@@ -178,20 +176,19 @@ async function endGame() {
     questionScreen.classList.remove('active');
     endScreen.classList.add('active');
 
-    // Submit answers to server for scoring
-    let serverScore = userAnswers.length; // fallback
-    try {
-        const res = await fetch('/api/round/1/submit', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ answers: userAnswers })
-        });
-        const data = await res.json();
-        if (data.success) {
-            serverScore = data.score;
+    // Compute score locally
+    let serverScore = 0;
+    for (let i = 0; i < ROUND_1_ANSWERS.length; i++) {
+        if (userAnswers[i] && userAnswers[i].toLowerCase().trim() === ROUND_1_ANSWERS[i]) {
+            serverScore++;
         }
-    } catch(e) {
-        console.warn('Server not reachable, using local score.');
+    }
+
+    // Save to local storage
+    if (!isAdmin) {
+        const sessionData = JSON.parse(localStorage.getItem('cyber_odyssey_session'));
+        sessionData.scores.round_1 = serverScore;
+        localStorage.setItem('cyber_odyssey_session', JSON.stringify(sessionData));
     }
 
     score = serverScore;

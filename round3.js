@@ -79,29 +79,23 @@ function shuffle(array) {
 }
 
 // ─── SESSION & ROUND STATUS CHECK ───────────────────────────────────────────
-(async function init() {
-    try {
-        const sessionRes = await fetch('/api/session');
-        const sessionData = await sessionRes.json();
-        if (!sessionData.authenticated) {
-            window.location.href = 'login.html';
-            return;
-        }
-        isAdmin = sessionData.is_admin;
+(function init() {
+    const sessionData = localStorage.getItem('cyber_odyssey_session');
+    if (!sessionData) {
+        window.location.href = 'login.html';
+        return;
+    }
+    const data = JSON.parse(sessionData);
+    isAdmin = data.is_admin;
 
-        const statusRes = await fetch('/api/round/3/status');
-        const statusData = await statusRes.json();
-        if (statusData.completed && !isAdmin) {
-            startScreen.classList.remove('active');
-            if (blockedScreen) {
-                blockedScreen.classList.add('active');
-                const blockedScore = document.getElementById('blocked-score');
-                if (blockedScore) blockedScore.textContent = statusData.score;
-            }
-            return;
+    if (data.scores && data.scores.round_3 !== null && !isAdmin) {
+        startScreen.classList.remove('active');
+        if (blockedScreen) {
+            blockedScreen.classList.add('active');
+            const blockedScore = document.getElementById('blocked-score');
+            if (blockedScore) blockedScore.textContent = data.scores.round_3;
         }
-    } catch(e) {
-        console.warn('Server not reachable, running in static mode.');
+        return;
     }
 
     startBtn.addEventListener('click', startGame);
@@ -110,9 +104,6 @@ function shuffle(array) {
 
 async function startGame() {
     if (window.startAntiCheatTracking) window.startAntiCheatTracking();
-    try {
-        await fetch('/api/round/3/start', { method: 'POST' });
-    } catch(e) { /* static fallback */ }
     
     startScreen.classList.remove('active');
     questionScreen.classList.add('active');
@@ -258,24 +249,12 @@ async function endGame() {
     questionScreen.classList.remove('active');
     endScreen.classList.add('active');
 
-    // Submit to server
-    let serverScore = score;
-    try {
-        const res = await fetch('/api/round/3/submit', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ answers: { sets: setResults } })
-        });
-        const data = await res.json();
-        if (data.success) {
-            serverScore = data.score;
-            if (data.time_elapsed_s) {
-                document.getElementById('time-elapsed').textContent = data.time_elapsed_s + 's';
-            }
-        }
-    } catch(e) { console.warn('Server not reachable.'); }
-
-    score = serverScore;
+    // Save to local storage
+    if (!isAdmin) {
+        const sessionData = JSON.parse(localStorage.getItem('cyber_odyssey_session'));
+        sessionData.scores.round_3 = score;
+        localStorage.setItem('cyber_odyssey_session', JSON.stringify(sessionData));
+    }
     
     let currentScore = 0;
     let stepTime = Math.max(20, Math.floor(1000 / Math.max(1, score)));
